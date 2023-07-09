@@ -8,11 +8,14 @@
 
 import colorsys
 import math
+import random
 import time
 import datetime
 import sys
 
 import unicornhathd
+
+import weather
 
 unicornhathd.rotation(270)
 unicornhathd.brightness(0.2)
@@ -398,34 +401,111 @@ def draw_small_string(s, x, y, color):
         draw_small_pattern(f['buf'], x, y, f['w'], f['h'], color)
         x += f['w'] + 1
 
+BRIGHTNESS = 64
 counter = 0        
-BLIGHTNESS = 32
+xys = []
+for i in range(16):
+    xys.append([random.randint(0,15), random.randint(-15,0)])
 
-def draw_bg():
-    global counter
-    counter += 1
-    for x in range(0, 16):
-        for y in range(0, 16):
+def draw_sun():
+    for y in range(0, 16):
+        for x in range(0, 16):
             dx = x - 7.5
             dy = y - 7.5
-            tt = (1.0 + math.sin(counter / 100.0)) * 5
+            tt = (1.0 + math.sin(counter / 30.0)) * 5
             th = math.atan2(dy, dx)
-            h = (16 - math.sqrt(dx * dx + dy * dy)
-                 + math.sin(th * tt)
-                 + counter / 4.0
-                 ) / 8.0
+            h = (72 - math.sqrt(dx * dx + dy * dy)
+                 + math.sin(th * tt) / 4
+                 + math.sin(counter / 10)
+                 ) / 64.0
             r, g, b = colorsys.hsv_to_rgb(h, 1, 1)            
-            r *= BLIGHTNESS
-            g *= BLIGHTNESS
-            b *= BLIGHTNESS
+            r *= BRIGHTNESS
+            g *= BRIGHTNESS
+            b *= BRIGHTNESS
             unicornhathd.set_pixel(x, y, r, g, b)
+
             
+def draw_cloud():
+    for y in range(0, 16):
+        for x in range(0, 16):
+            dx = x + 7 * math.sin(counter / 20) - 7.5
+            dy = (y + counter / 5) % 16 - 7.5
+            i = (16 - math.sqrt(dx * dx + dy * dy)) / 16.0
+            i *= BRIGHTNESS
+            unicornhathd.set_pixel(x, y, i, i, i)
+           
+
+def draw_rain():
+    for xy in xys:
+        for i in range(8):
+            x = xy[0]
+            y = xy[1] - i
+            if 0 <= y <= 15:
+                r, g, b = colorsys.hsv_to_rgb(0.6, 1, (8 - i) / 8.0)
+                r *= BRIGHTNESS
+                g *= BRIGHTNESS
+                b *= BRIGHTNESS
+                unicornhathd.set_pixel(x, y, r, g, b)
+        if xy[1] < 24:
+            xy[1] += 1
+        else:
+            xy[0] = random.randint(0, 15)
+            xy[1] = random.randint(-15, 0)
+
+            
+def draw_snow():
+    for xy in xys:
+        x = xy[0]
+        y = xy[1]
+        if 0 <= y <= 15:
+            i = BRIGHTNESS
+            unicornhathd.set_pixel(x, y, i, i, i)
+
+        if counter % 10 != 0: continue
+
+        if xy[1] < 15:
+            xy[0] = (xy[0] + random.randint(-1, 1)) % 16
+            xy[1] += 1
+        else:
+            xy[0] = random.randint(0, 15)
+            xy[1] = random.randint(-15, 0)
+
+DRAW_FUNCS = {
+    weather.CLEAR: draw_sun,
+    weather.CLOUDY: draw_cloud,
+    weather.RAIN: draw_rain,
+    weather.SNOW: draw_snow
+}
+
+
+def draw_weather(w, s):
+    w1, conj, w2 = w
+    if conj == weather.NONE:
+        DRAW_FUNCS[w1]()
+    elif conj == weather.LATER:
+        if s % 10 < 4:
+            DRAW_FUNCS[w1]()
+        elif s % 10 < 8:
+            DRAW_FUNCS[w2]()
+    else: # weather.PARTLY
+        if s % 10 < 7:
+            DRAW_FUNCS[w1]()
+        else:
+            DRAW_FUNCS[w2]()
+            
+#cur_weather = (weather.CLEAR, weather.LATER, weather.CLOUDY)
+cur_weather = (weather.RAIN, weather.PARTLY, weather.SNOW)
+last_weather_time = None
+
 try:
     while True:
         unicornhathd.clear()
 
         t = datetime.datetime.now()
-        draw_bg()
+        if (last_weather_time == None or
+            t - last_weather_time > datetime.timedelta(hours=1)):
+            cur_weather = weather.get_weather()
+            last_weather_time = t
         
         h = t.hour
         if h >= 13:
@@ -433,6 +513,9 @@ try:
         m = t.minute
         s = t.second
 
+        counter += 1
+        draw_weather(cur_weather, s)
+        
         ts = f'{h}:{m:02}'
         draw_string(ts, 0, 2, (255, 255, 255))
 
