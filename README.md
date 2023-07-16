@@ -12,9 +12,9 @@ https://github.com/takosatou/iroiroclock/assets/52827488/3f66dd94-f504-47f9-9bee
 ## Customizing the area to show the weather
 Edit the following constants in weather.py
 - AREA ... the area code on https://www.jma.go.jp/bosai/forecast/
-- AREA_SUB ... the index of the sub-areas in the area
+- AREA_SUB ... the index of the sub-areas in the area.
 The default codes are for Kanagawa prefecture and Yokohama city.
 
-## Unicord HAT HD
+## Unicorn HAT HD
 - https://shop.pimoroni.com/products/unicorn-hat-hd?variant=42496126730
 - https://www.switch-science.com/products/3336
