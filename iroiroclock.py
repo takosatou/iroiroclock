@@ -514,7 +514,8 @@ try:
         s = t.second
 
         counter += 1
-        draw_weather(cur_weather, s)
+        if cur_weather:
+            draw_weather(cur_weather, s)
         
         ts = f'{h}:{m:02}'
         draw_string(ts, 0, 2, (255, 255, 255))
